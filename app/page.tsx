@@ -3,6 +3,7 @@ import { AnimatedSection, AnimatedFadeIn } from '@/components/AnimatedSection';
 import { Table2, Share2, BarChart3, Download, Globe, Zap, Shield, Code } from 'lucide-react';
 import { createServerClient } from '@/lib/supabase-server';
 
+export const dynamic = 'force-dynamic';
 export const revalidate = 60;
 
 async function getFeaturedSheets() {

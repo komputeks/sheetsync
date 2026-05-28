@@ -1,9 +1,24 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+let supabaseInstance: ReturnType<typeof createClient> | null = null;
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+export function getSupabaseClient() {
+  if (typeof window === 'undefined') {
+    // Server-side: create fresh instance
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+    return createClient(supabaseUrl || 'https://placeholder.supabase.co', supabaseKey || 'placeholder');
+  }
+  // Browser-side: reuse instance
+  if (!supabaseInstance) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+    supabaseInstance = createClient(supabaseUrl || 'https://placeholder.supabase.co', supabaseKey || 'placeholder');
+  }
+  return supabaseInstance;
+}
+
+export const supabase = getSupabaseClient();
 
 export type Profile = {
   id: string;

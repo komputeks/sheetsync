@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Search, Table2 } from 'lucide-react';
 import { createServerClient } from '@/lib/supabase-server';
 
+export const dynamic = 'force-dynamic';
 export const revalidate = 60;
 
 async function getPublicSheets() {
