@@ -24,6 +24,9 @@ yarn-error.log*
 # Vercel
 .vercel
 
+# Old API routes (using Next.js App Router now)
+api/
+
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
