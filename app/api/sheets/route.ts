@@ -1,6 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase-server';
 
+async function getUserFromToken(supabase: ReturnType<typeof createServerClient>, token: string | null) {
+  if (!token) return null;
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (error || !user) return null;
+    return user;
+  } catch {
+    return null;
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     const supabase = createServerClient();
@@ -11,12 +22,9 @@ export async function GET(request: NextRequest) {
     const isPublic = searchParams.get('public');
 
     const authHeader = request.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '');
-    let userId: string | null = null;
-    if (token) {
-      const { data: { user } } = await supabase.auth.getUser(token);
-      if (user) userId = user.id;
-    }
+    const token = authHeader?.replace('Bearer ', '') || null;
+    const user = await getUserFromToken(supabase, token);
+    const userId = user?.id || null;
 
     if (id) {
       const { data, error } = await supabase.from('sheets').select('*, profiles(username, display_name, avatar_url)').eq('id', id).single();
@@ -50,10 +58,8 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = createServerClient();
     const authHeader = request.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '');
-    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-    const { data: { user } } = await supabase.auth.getUser(token);
+    const token = authHeader?.replace('Bearer ', '') || null;
+    const user = await getUserFromToken(supabase, token);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await request.json();
@@ -79,10 +85,8 @@ export async function PUT(request: NextRequest) {
   try {
     const supabase = createServerClient();
     const authHeader = request.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '');
-    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-    const { data: { user } } = await supabase.auth.getUser(token);
+    const token = authHeader?.replace('Bearer ', '') || null;
+    const user = await getUserFromToken(supabase, token);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await request.json();
@@ -102,10 +106,8 @@ export async function DELETE(request: NextRequest) {
   try {
     const supabase = createServerClient();
     const authHeader = request.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '');
-    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-    const { data: { user } } = await supabase.auth.getUser(token);
+    const token = authHeader?.replace('Bearer ', '') || null;
+    const user = await getUserFromToken(supabase, token);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await request.json();
