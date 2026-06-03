@@ -1,6 +1,7 @@
 import { createServerClient } from '@/lib/supabase-server';
 import { getServerSession } from 'next-auth';
 import { Users, FileSpreadsheet, Activity, AlertCircle, Settings, Layout, Database, ShieldCheck } from 'lucide-react';
+import DeployButton from './DeployButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -77,7 +78,6 @@ export default async function AdminDashboard() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Recent Errors */}
             <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
               <div className="p-8 border-b border-slate-100 dark:border-slate-700">
                 <h3 className="text-xl font-bold text-slate-900 dark:text-white">Recent Sync Failures</h3>
@@ -98,17 +98,16 @@ export default async function AdminDashboard() {
               </div>
             </div>
 
-            {/* Quick Actions */}
             <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] border border-slate-200 dark:border-slate-700 p-8 shadow-sm">
                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-8">Quick Controls</h3>
                <div className="grid grid-cols-2 gap-4">
+                  <DeployButton />
                   {[
                     'Disallow Registration',
                     'Maintenance Mode',
                     'Backup Database',
                     'Clear Global Cache',
                     'Update Env Vars',
-                    'GitHub PAT Config'
                   ].map((action, i) => (
                     <button key={i} className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 transition duration-200">
                       {action}

@@ -1,0 +1,18 @@
+
+> sheetsync@1.0.0 dev
+> next dev
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+   ▲ Next.js 16.0.0-canary.0 (Turbopack)
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.0.2:3000
+   - Environments: .env.local
+
+ ✓ Starting...
+ ○ Compiling middleware ...
+ ✓ Compiled middleware in 596ms
+ ⚠ The "middleware" file convention is deprecated. Please use "proxy" instead.
+ ✓ Ready in 1783ms
+ ○ Compiling / ...
+ ✓ Compiled / in 5.2s
+ HEAD / 200 in 5886ms
