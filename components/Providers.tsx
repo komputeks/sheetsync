@@ -1,12 +1,17 @@
 'use client';
 
-import { useEffect } from 'react';
-import { handleGoogleRedirect } from '@/lib/googleAuth';
+import { SessionProvider } from 'next-auth/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useState } from 'react';
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  useEffect(() => {
-    handleGoogleRedirect();
-  }, []);
+  const [queryClient] = useState(() => new QueryClient());
 
-  return <>{children}</>;
+  return (
+    <SessionProvider>
+      <QueryClientProvider client={queryClient}>
+        {children}
+      </QueryClientProvider>
+    </SessionProvider>
+  );
 }

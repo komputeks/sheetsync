@@ -1,157 +1,123 @@
-'use client';
+import { createServerClient } from '@/lib/supabase-server';
+import { getServerSession } from 'next-auth';
+import { Users, FileSpreadsheet, Activity, AlertCircle, Settings, Layout, Database, ShieldCheck } from 'lucide-react';
+import DeployButton from './DeployButton';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/lib/supabase';
-import { motion } from 'framer-motion';
-import { Users, Table2, CreditCard, Activity, ArrowLeft, Shield } from 'lucide-react';
+export const dynamic = 'force-dynamic';
 
-export default function Admin() {
-  const { user, profile } = useAuth();
-  const router = useRouter();
-  const [stats, setStats] = useState<any>(null);
-  const [users, setUsers] = useState<any[]>([]);
-  const [sheets, setSheets] = useState<any[]>([]);
-  const [transactions, setTransactions] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'sheets' | 'transactions'>('overview');
-  const [loading, setLoading] = useState(true);
+async function getAdminStats() {
+  const supabase = createServerClient();
+  const [users, sheets, syncs, errors] = await Promise.all([
+    supabase.from('profiles').select('id', { count: 'exact' }),
+    supabase.from('sheets').select('id', { count: 'exact' }),
+    supabase.from('sync_logs').select('id', { count: 'exact' }),
+    supabase.from('sync_logs').select('*').eq('status', 'failed').limit(5),
+  ]);
 
-  useEffect(() => {
-    if (!user || profile?.role !== 'admin') return;
-    const fetchData = async () => {
-      const session = await supabase.auth.getSession();
-      const token = session.data.session?.access_token;
-      const headers = { 'Authorization': `Bearer ${token}` };
-      const [statsRes, usersRes, sheetsRes, transRes] = await Promise.all([
-        fetch('/api/admin?metric=stats', { headers }),
-        fetch('/api/admin?metric=users', { headers }),
-        fetch('/api/admin?metric=sheets', { headers }),
-        fetch('/api/admin?metric=transactions', { headers }),
-      ]);
-      setStats(await statsRes.json());
-      setUsers(await usersRes.json());
-      setSheets(await sheetsRes.json());
-      setTransactions(await transRes.json());
-      setLoading(false);
-    };
-    fetchData();
-  }, [user, profile]);
+  return {
+    userCount: users.count || 0,
+    sheetCount: sheets.count || 0,
+    syncCount: syncs.count || 0,
+    recentErrors: errors.data || [],
+  };
+}
 
-  if (!user || profile?.role !== 'admin') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
-        <div className="text-center">
-          <Shield className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Access Denied</h2>
-          <p className="text-slate-600 dark:text-slate-400 mt-2">Admin access required.</p>
-        </div>
-      </div>
-    );
-  }
+export default async function AdminDashboard() {
+  const session = await getServerSession();
+  const stats = await getAdminStats();
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <button onClick={() => router.push('/dashboard')} className="flex items-center gap-2 text-slate-600 dark:text-slate-400 mb-6 hover:text-indigo-600">
-          <ArrowLeft className="w-4 h-4" /> Back to Dashboard
-        </button>
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-8">Admin Dashboard</h1>
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex">
+      {/* Sidebar */}
+      <aside className="w-64 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 hidden lg:block sticky top-16 h-[calc(100vh-64px)]">
+        <div className="p-6">
+          <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-8">Management</h2>
+          <nav className="space-y-2">
+            {[
+              { icon: Users, label: 'Users', active: true },
+              { icon: FileSpreadsheet, label: 'Sheets' },
+              { icon: Activity, label: 'Analytics' },
+              { icon: AlertCircle, label: 'Error Logs' },
+              { icon: Layout, label: 'Layouts' },
+              { icon: Settings, label: 'Global Settings' },
+              { icon: Database, label: 'Backups' },
+            ].map((item, i) => (
+              <button key={i} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${item.active ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 dark:shadow-none' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:text-slate-900 dark:hover:text-white'}`}>
+                <item.icon className="w-4 h-4" /> {item.label}
+              </button>
+            ))}
+          </nav>
+        </div>
+      </aside>
 
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            {[1, 2, 3, 4].map(i => <div key={i} className="bg-white dark:bg-slate-800 rounded-2xl h-32 animate-pulse" />)}
+      {/* Main Content */}
+      <main className="flex-1 p-8">
+        <div className="max-w-6xl mx-auto">
+          <header className="flex justify-between items-end mb-12">
+            <div>
+              <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Admin Console</h1>
+              <p className="text-slate-500 font-medium mt-1">Full system overview and control panel.</p>
+            </div>
+            <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 px-4 py-2 rounded-xl border border-emerald-100 dark:border-emerald-800/30 text-xs font-bold">
+              <ShieldCheck className="w-4 h-4" /> SYSTEM OPERATIONAL
+            </div>
+          </header>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+            {[
+              { label: 'Total Users', value: stats.userCount, icon: Users, color: 'text-blue-600' },
+              { label: 'Active Sheets', value: stats.sheetCount, icon: FileSpreadsheet, color: 'text-indigo-600' },
+              { label: 'Sync Operations', value: stats.syncCount, icon: Activity, color: 'text-purple-600' },
+            ].map((stat, i) => (
+              <div key={i} className="bg-white dark:bg-slate-800 p-8 rounded-[2rem] border border-slate-200 dark:border-slate-700 shadow-sm">
+                <stat.icon className={`w-8 h-8 ${stat.color} mb-4`} />
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{stat.label}</p>
+                <h3 className="text-4xl font-black text-slate-900 dark:text-white mt-1">{stat.value}</h3>
+              </div>
+            ))}
           </div>
-        ) : (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              {[
-                { label: 'Users', value: stats?.users || 0, icon: Users, color: 'text-blue-600 bg-blue-50 dark:bg-blue-900/20' },
-                { label: 'Sheets', value: stats?.sheets || 0, icon: Table2, color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20' },
-                { label: 'Transactions', value: stats?.transactions || 0, icon: CreditCard, color: 'text-amber-600 bg-amber-50 dark:bg-amber-900/20' },
-                { label: 'Analytics Events', value: stats?.analytics || 0, icon: Activity, color: 'text-purple-600 bg-purple-50 dark:bg-purple-900/20' },
-              ].map((s, i) => (
-                <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6">
-                  <div className={`w-10 h-10 rounded-lg ${s.color} flex items-center justify-center mb-3`}>
-                    <s.icon className="w-5 h-5" />
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
+              <div className="p-8 border-b border-slate-100 dark:border-slate-700">
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white">Recent Sync Failures</h3>
+              </div>
+              <div className="p-4">
+                {stats.recentErrors.length === 0 ? (
+                  <div className="py-12 text-center text-slate-400 font-medium italic">No recent errors detected.</div>
+                ) : (
+                  <div className="space-y-2">
+                    {stats.recentErrors.map((err: any) => (
+                      <div key={err.id} className="p-4 bg-red-50 dark:bg-red-900/10 rounded-2xl border border-red-100 dark:border-red-900/30">
+                        <p className="text-sm font-bold text-red-700 dark:text-red-400">{err.message}</p>
+                        <p className="text-[10px] text-red-500 mt-1 uppercase tracking-widest">{new Date(err.created_at).toLocaleString()}</p>
+                      </div>
+                    ))}
                   </div>
-                  <p className="text-2xl font-bold text-slate-900 dark:text-white">{s.value}</p>
-                  <p className="text-sm text-slate-500">{s.label}</p>
-                </motion.div>
-              ))}
+                )}
+              </div>
             </div>
 
-            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-              <div className="flex border-b border-slate-200 dark:border-slate-700">
-                {(['overview', 'users', 'sheets', 'transactions'] as const).map(tab => (
-                  <button key={tab} onClick={() => setActiveTab(tab)} className={`px-6 py-3 text-sm font-medium capitalize ${activeTab === tab ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}>
-                    {tab}
-                  </button>
-                ))}
-              </div>
-              <div className="p-6">
-                {activeTab === 'overview' && (
-                  <div className="space-y-4">
-                    <p className="text-slate-600 dark:text-slate-400">Platform overview and key metrics.</p>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="p-4 bg-slate-50 dark:bg-slate-700 rounded-xl">
-                        <p className="text-sm text-slate-500">Total Rows Synced</p>
-                        <p className="text-2xl font-bold text-slate-900 dark:text-white">{stats?.rows || 0}</p>
-                      </div>
-                      <div className="p-4 bg-slate-50 dark:bg-slate-700 rounded-xl">
-                        <p className="text-sm text-slate-500">Storage Usage</p>
-                        <p className="text-2xl font-bold text-slate-900 dark:text-white">{(users.length * 0.5 + sheets.length * 0.1).toFixed(1)} MB</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                {activeTab === 'users' && (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm">
-                      <thead className="bg-slate-50 dark:bg-slate-700">
-                        <tr><th className="px-4 py-3">Username</th><th className="px-4 py-3">Display Name</th><th className="px-4 py-3">Role</th><th className="px-4 py-3">Premium</th><th className="px-4 py-3">Joined</th></tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                        {users.map((u: any) => (
-                          <tr key={u.id}><td className="px-4 py-3">{u.username}</td><td className="px-4 py-3">{u.display_name || '—'}</td><td className="px-4 py-3 capitalize">{u.role}</td><td className="px-4 py-3">{u.is_premium ? 'Yes' : 'No'}</td><td className="px-4 py-3">{new Date(u.created_at).toLocaleDateString()}</td></tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-                {activeTab === 'sheets' && (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm">
-                      <thead className="bg-slate-50 dark:bg-slate-700">
-                        <tr><th className="px-4 py-3">Title</th><th className="px-4 py-3">Owner</th><th className="px-4 py-3">Rows</th><th className="px-4 py-3">Layout</th><th className="px-4 py-3">Public</th></tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                        {sheets.map((s: any) => (
-                          <tr key={s.id}><td className="px-4 py-3">{s.title}</td><td className="px-4 py-3">{s.profiles?.username}</td><td className="px-4 py-3">{s.row_count || 0}</td><td className="px-4 py-3 capitalize">{s.layout_type}</td><td className="px-4 py-3">{s.is_public ? 'Yes' : 'No'}</td></tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-                {activeTab === 'transactions' && (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm">
-                      <thead className="bg-slate-50 dark:bg-slate-700">
-                        <tr><th className="px-4 py-3">Product</th><th className="px-4 py-3">Amount</th><th className="px-4 py-3">Phone</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Date</th></tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                        {transactions.map((t: any) => (
-                          <tr key={t.id}><td className="px-4 py-3">{t.product_name}</td><td className="px-4 py-3">{t.amount}</td><td className="px-4 py-3">{t.phone_number}</td><td className="px-4 py-3 capitalize">{t.status}</td><td className="px-4 py-3">{new Date(t.created_at).toLocaleDateString()}</td></tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
+            <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] border border-slate-200 dark:border-slate-700 p-8 shadow-sm">
+               <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-8">Quick Controls</h3>
+               <div className="grid grid-cols-2 gap-4">
+                  <DeployButton />
+                  {[
+                    'Disallow Registration',
+                    'Maintenance Mode',
+                    'Backup Database',
+                    'Clear Global Cache',
+                    'Update Env Vars',
+                  ].map((action, i) => (
+                    <button key={i} className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 transition duration-200">
+                      {action}
+                    </button>
+                  ))}
+               </div>
             </div>
-          </>
-        )}
-      </div>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }

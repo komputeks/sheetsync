@@ -1,24 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 
-let supabaseInstance: ReturnType<typeof createClient> | null = null;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-export function getSupabaseClient() {
-  if (typeof window === 'undefined') {
-    // Server-side: create fresh instance
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-    return createClient(supabaseUrl || 'https://placeholder.supabase.co', supabaseKey || 'placeholder');
-  }
-  // Browser-side: reuse instance
-  if (!supabaseInstance) {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-    supabaseInstance = createClient(supabaseUrl || 'https://placeholder.supabase.co', supabaseKey || 'placeholder');
-  }
-  return supabaseInstance;
-}
-
-export const supabase = getSupabaseClient();
+export const supabase = createClient(
+  supabaseUrl || 'https://placeholder.supabase.co',
+  supabaseAnonKey || 'placeholder'
+);
 
 export type Profile = {
   id: string;
@@ -28,8 +16,13 @@ export type Profile = {
   role: string;
   is_premium: boolean;
   lipia_api_key: string | null;
-  contact_info: Record<string, any> | null;
+  contact_info: any;
+  delivery_info: any;
+  refund_policy: string | null;
+  shop_location: string | null;
+  thank_notes: string | null;
   created_at: string;
+  updated_at: string;
 };
 
 export type Sheet = {
@@ -41,11 +34,11 @@ export type Sheet = {
   slug: string;
   is_public: boolean;
   layout_type: string;
-  column_config: Record<string, any>;
+  column_config: any;
   row_count: number;
   last_synced_at: string | null;
   created_at: string;
-  profiles?: { username: string; display_name: string | null; avatar_url: string | null };
+  profiles?: Partial<Profile>;
 };
 
 export type SheetColumn = {
@@ -54,6 +47,7 @@ export type SheetColumn = {
   name: string;
   type: string;
   index: number;
+  config: any;
   created_at: string;
 };
 
@@ -61,17 +55,21 @@ export type SheetRow = {
   id: string;
   sheet_id: string;
   row_index: number;
-  data: Record<string, any>;
+  data: any;
+  __sheet_sync_id: string;
   created_at: string;
 };
 
 export type Transaction = {
   id: string;
-  sheet_id: string;
-  product_name: string;
+  sheet_id: string | null;
+  buyer_id: string | null;
+  product_name: string | null;
   amount: number;
-  phone_number: string;
+  phone_number: string | null;
   status: string;
   reference: string | null;
+  checkout_request_id: string | null;
+  metadata: any;
   created_at: string;
 };
