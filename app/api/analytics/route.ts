@@ -1,0 +1,41 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createServerClient } from '@/lib/supabase-server';
+
+export async function GET(request: NextRequest) {
+  try {
+    const supabase = createServerClient();
+    const { searchParams } = new URL(request.url);
+    const sheet_id = searchParams.get('sheet_id');
+    const user_id = searchParams.get('user_id');
+
+    let query = supabase.from('analytics').select('*');
+    if (sheet_id) query = query.eq('sheet_id', sheet_id);
+    if (user_id) {
+      const { data: sheets } = await supabase.from('sheets').select('id').eq('owner_id', user_id);
+      const sheetIds = (sheets || []).map((s: any) => s.id);
+      if (sheetIds.length > 0) query = query.in('sheet_id', sheetIds);
+    }
+    const { data, error } = await query.order('created_at', { ascending: false }).limit(1000);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(data);
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const supabase = createServerClient();
+    const body = await request.json();
+    const { sheet_id, event_type, metadata } = body;
+    const { data, error } = await supabase.from('analytics').insert({
+      sheet_id,
+      event_type,
+      metadata: metadata || {},
+    }).select().single();
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(data, { status: 201 });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
